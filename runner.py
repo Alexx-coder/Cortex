@@ -2,8 +2,8 @@ import json
 import os
 import sys
 import time
+import getpass
 from art import text2art as t2
-
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'router'))
 
@@ -12,12 +12,14 @@ from router.gemini_provider import GeminiProvider
 from router.ollama_provider import Ollama
 from router.openai_provider import OpenAIProvider
 from router.openrouter_provider import OpenRouterProvider
+
+from database import Database
+
 PICTURE_MAIN = t2("CORTEX")
 
 CONFIG_DIR = os.path.expanduser("~/.cortex")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 
-# Стандартный конфиг, который создастся автоматически
 DEFAULT_CONFIG = {
     "gemini": {
         "api_key": "",
@@ -32,7 +34,7 @@ DEFAULT_CONFIG = {
         "model": "meta-llama/llama-3-8b-instruct:free"
     },
     "ollama": {
-        "model": "glm4.7-flash", # Твоя модель
+        "model": "glm-4.7-flash:latest",
         "base_url": "http://localhost:11434"
     },
     "agents": {
@@ -58,9 +60,17 @@ class Runner:
     def __init__(self):
         self.name = "CORTEX"
         self.version = 'v0.1.0'
+        
+        # 1. Запрашиваем пароль для расшифровки БД
+        print("--- DATABASE AUTHENTICATION ---")
+        pwd = getpass.getpass("Enter master password: ")
+        self.db = Database(pwd)
+        print("Database loaded successfully.\n")
+        
+        # 2. Загружаем конфиг
         self.config = load_config()
         
-        # Инициализация провайдеров на основе конфига
+        # 3. Инициализация провайдеров
         self.providers = {
             "ollama": Ollama(
                 model=self.config["ollama"]["model"], 
@@ -82,11 +92,13 @@ class Runner:
             ) if self.config["openrouter"]["api_key"] else None
         }
 
+        # 4. Передаем db в Commands!
         self.commands_handler = Commands(
             providers=self.providers,
             agent_map=self.config["agents"],
             config_path=CONFIG_PATH,
-            version=self.version
+            version=self.version,
+            db=self.db  # ВОТ ТУТ МЫ ПЕРЕДАЕМ БАЗУ
         )
 
     def main(self):
@@ -102,6 +114,14 @@ class Runner:
                 if user_input.startswith("/message:"):
                     cmd_text = user_input.replace("/message:", "").strip()
                     self.commands_handler.message(cmd_text)
+                elif user_input.startswith("/new "):
+                    chat_name = user_input.replace("/new ", "").strip()
+                    self.commands_handler.new_chat(chat_name)
+                elif user_input == "/chats":
+                    self.commands_handler.list_chats()
+                elif user_input.startswith("/switch "):
+                    chat_id = user_input.replace("/switch ", "").strip()
+                    self.commands_handler.switch_chat(chat_id)
                 elif user_input == "/stop":
                     print("Stopping Cortex...")
                     time.sleep(1)
@@ -124,5 +144,10 @@ class Runner:
                 print(f"[ERROR] An error occurred: {err}")
 
 if __name__ == "__main__":
-    app = Runner()
-    app.main()
+    try:
+      app = Runner()
+      app.main()
+    except Exception as err:
+        print(f'[ERROR] An error has occurred: {err}')
+    except KeyboardInterrupt:
+        print("[SYSTEM] Cortex stopped by user.")

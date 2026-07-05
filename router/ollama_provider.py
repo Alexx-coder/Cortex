@@ -3,7 +3,7 @@ from typing import Generator, Optional
 import requests
 
 class Ollama:
-    def __init__(self, model="glm4.7-flash", url="http://localhost:11434"):
+    def __init__(self, model="glm-4.7-flash:latest", url="http://localhost:11434"):
         self.url = url
         self.model = model
 
@@ -21,13 +21,19 @@ class Ollama:
         except requests.RequestException:
             return []
 
-    def chat(self, prompt: str, system: Optional[str] = None) -> str:
+    def chat(self, prompt: str, system: Optional[str] = None, history: list = None) -> str:
         if not self.model:
             return "[ERROR] No Ollama model selected in config.json."
 
-        messages = []
+        # Берем старую историю, если она есть
+        messages = history.copy() if history else []
+
+        # Вставляем системный промпт в начало, если его там нет
         if system:
-            messages.append({"role": "system", "content": system})
+            if not messages or messages[0].get("role") != "system":
+                messages.insert(0, {"role": "system", "content": system})
+
+        # Добавляем новое сообщение пользователя
         messages.append({"role": "user", "content": prompt})
 
         try:
@@ -43,6 +49,7 @@ class Ollama:
         except Exception as e:
             return f"[ERROR] Ollama request failed: {e}"
 
+    # chat_stream оставляю без истории пока, чтобы не усложнять
     def chat_stream(self, prompt: str, system: Optional[str] = None) -> Generator[str, None, None]:
         if not self.model:
             yield "[ERROR] No Ollama model selected."
@@ -58,7 +65,7 @@ class Ollama:
                 f"{self.url}/api/chat",
                 json={"model": self.model, "messages": messages, "stream": True},
                 stream=True,
-                
+                timeout=300,
             )
             r.raise_for_status()
 

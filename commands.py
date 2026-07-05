@@ -2,11 +2,12 @@ import time
 from art import text2art as t2
 
 class Commands:
-    def __init__(self, providers, agent_map, config_path, version):
+    def __init__(self, providers, agent_map, config_path, version, db):
         self.providers = providers
         self.agent_map = agent_map
         self.config_path = config_path
         self.version = version
+        self.db = db  # Теперь база точно здесь
 
         self.prompts = {
             "code": "You are an expert programmer. Write clean, optimized code with comments. Answer only to the point.",
@@ -16,13 +17,16 @@ class Commands:
 
     def help(self):
         print("\n--- AVAILABLE COMMANDS ---")
-        print("/help          - Show this help message")
-        print("/about         - Information about Cortex")
-        print("/version       - Current version")
-        print("/settings      - Show current configuration")
+        print("/help            - Show this help message")
+        print("/new <name>      - Create a new chat")
+        print("/chats           - List all saved chats")
+        print("/switch <id>     - Switch to another chat")
         print("/message: <agent> <text> - Send message to agent")
         print("               Agents: code, ideas, other")
-        print("/stop          - Stop Cortex")
+        print("/settings        - Show current configuration")
+        print("/about           - Information about Cortex")
+        print("/version         - Current version")
+        print("/stop            - Stop Cortex")
         print("-------------------------\n")
 
     def about(self):
@@ -48,7 +52,34 @@ Version: {self.version}\n""")
         print("\nTo change settings, edit the config.json file and restart Cortex.")
         print("------------------------\n")
 
+    def new_chat(self, name):
+        if not name:
+            print("[ERROR] Please provide a chat name. Example: /new My Python Project")
+            return
+        chat_id = self.db.create_chat(name)
+        print(f"[SYSTEM] Created new chat '{name}' with ID: {chat_id}")
+
+    def list_chats(self):
+        chats = self.db.list_chats()
+        if not chats:
+            print("[SYSTEM] No chats found. Use /new <name> to create one.")
+            return
+        print("\n--- YOUR CHATS ---")
+        for c in chats:
+            print(c)
+        print("------------------\n")
+
+    def switch_chat(self, chat_id):
+        if self.db.switch_chat(chat_id):
+            print(f"[SYSTEM] Switched to chat {chat_id}")
+        else:
+            print(f"[ERROR] Chat {chat_id} not found.")
+
     def message(self, full_input):
+        if not self.db.data.get('active_chat'):
+            print("[ERROR] No active chat. Please create one using /new <name>")
+            return
+
         parts = full_input.split(" ", 1)
         if len(parts) < 2:
             print("[ERROR] Format: /message: <agent> <text>")
@@ -69,10 +100,20 @@ Version: {self.version}\n""")
             return
 
         system_prompt = self.prompts.get(agent_name, self.prompts["other"])
+        history = self.db.get_active_history()
         
         print(f"\n[{agent_name.upper()}] Thinking...")
+        
+        # Сохраняем запрос пользователя в историю ПЕРЕД отправкой
+        self.db.add_message("user", prompt_text)
+
         try:
-            response = agent_provider.chat(prompt_text, system=system_prompt)
+            # Отправляем историю в ИИ
+            response = agent_provider.chat(prompt_text, system=system_prompt, history=history)
             print(f"\n[{agent_name.upper()}]:\n{response}\n")
+            
+            # Сохраняем ответ ИИ в историю
+            self.db.add_message("assistant", response)
+            
         except Exception as e:
             print(f"[ERROR] Failed to get response from AI: {e}\n")

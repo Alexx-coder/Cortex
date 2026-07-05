@@ -1,5 +1,5 @@
 import requests
-
+from typing import Optional
 
 class OpenAIProvider:
     def __init__(self, api_key, model, base_url="https://api.openai.com/v1"):
@@ -9,23 +9,22 @@ class OpenAIProvider:
 
     def chat(
         self,
-        prompt,
-        system=None,
-        temperature=0.7,
-        max_tokens=4096,
-    ):
-        messages = []
+        prompt: str,
+        system: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        history: list = None
+    ) -> str:
+        # Берем историю
+        messages = history.copy() if history else []
 
+        # Добавляем системный промпт
         if system:
-            messages.append({
-                "role": "system",
-                "content": system
-            })
+            if not messages or messages[0].get("role") != "system":
+                messages.insert(0, {"role": "system", "content": system})
 
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
+        # Добавляем запрос
+        messages.append({"role": "user", "content": prompt})
 
         r = requests.post(
             f"{self.base_url}/chat/completions",
