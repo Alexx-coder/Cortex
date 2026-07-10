@@ -92,7 +92,11 @@ Version: {self.version}\n""")
             print(f"[ERROR] Agent '{agent_name}' does not exist. Available: {', '.join(self.agent_map.keys())}")
             return
 
-        provider_name = self.agent_map[agent_name]
+        agent_settings = self.agent_map[agent_name]
+        provider_name = agent_settings.get("provider")
+        temperature = agent_settings.get("temperature", 0.7)
+        max_tokens = agent_settings.get("max_tokens", 4096)
+
         agent_provider = self.providers.get(provider_name)
 
         if not agent_provider:
@@ -104,15 +108,18 @@ Version: {self.version}\n""")
         
         print(f"\n[{agent_name.upper()}] Thinking...")
         
-        # Сохраняем запрос пользователя в историю ПЕРЕД отправкой
         self.db.add_message("user", prompt_text)
 
         try:
-            # Отправляем историю в ИИ
-            response = agent_provider.chat(prompt_text, system=system_prompt, history=history)
+            response = agent_provider.chat(
+                prompt_text, 
+                system=system_prompt, 
+                history=history,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
             print(f"\n[{agent_name.upper()}]:\n{response}\n")
             
-            # Сохраняем ответ ИИ в историю
             self.db.add_message("assistant", response)
             
         except Exception as e:

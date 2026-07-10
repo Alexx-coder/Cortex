@@ -21,25 +21,30 @@ class Ollama:
         except requests.RequestException:
             return []
 
-    def chat(self, prompt: str, system: Optional[str] = None, history: list = None) -> str:
+    def chat(self, prompt: str, system: Optional[str] = None, history: list = None, temperature: float = 0.7, max_tokens: int = 4096) -> str:
         if not self.model:
             return "[ERROR] No Ollama model selected in config.json."
 
-        # Берем старую историю, если она есть
         messages = history.copy() if history else []
 
-        # Вставляем системный промпт в начало, если его там нет
         if system:
             if not messages or messages[0].get("role") != "system":
                 messages.insert(0, {"role": "system", "content": system})
 
-        # Добавляем новое сообщение пользователя
         messages.append({"role": "user", "content": prompt})
 
         try:
             r = requests.post(
                 f"{self.url}/api/chat",
-                json={"model": self.model, "messages": messages, "stream": False},
+                json={
+                    "model": self.model, 
+                    "messages": messages, 
+                    "stream": False, 
+                    "options": {
+                        "temperature": temperature,
+                        "num_predict": max_tokens
+                    }
+                },
                 timeout=300,
             )
             r.raise_for_status()

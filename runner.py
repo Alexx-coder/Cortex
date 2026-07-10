@@ -59,18 +59,27 @@ def load_config():
 class Runner:
     def __init__(self):
         self.name = "CORTEX"
-        self.version = 'v0.1.0'
+        self.version = 'v0.1.1'
         
-        # 1. Запрашиваем пароль для расшифровки БД
         print("--- DATABASE AUTHENTICATION ---")
         pwd = getpass.getpass("Enter master password: ")
         self.db = Database(pwd)
         print("Database loaded successfully.\n")
         
-        # 2. Загружаем конфиг
+        self.config = load_config()
+
         self.config = load_config()
         
-        # 3. Инициализация провайдеров
+   
+        for agent_name, agent_value in self.config["agents"].items():
+            if isinstance(agent_value, str):
+                self.config["agents"][agent_name] = {
+                    "provider": agent_value,
+                    "temperature": 0.7,
+                    "max_tokens": 4096
+                }
+
+        
         self.providers = {
             "ollama": Ollama(
                 model=self.config["ollama"]["model"], 
@@ -92,13 +101,12 @@ class Runner:
             ) if self.config["openrouter"]["api_key"] else None
         }
 
-        # 4. Передаем db в Commands!
         self.commands_handler = Commands(
             providers=self.providers,
             agent_map=self.config["agents"],
             config_path=CONFIG_PATH,
             version=self.version,
-            db=self.db  # ВОТ ТУТ МЫ ПЕРЕДАЕМ БАЗУ
+            db=self.db  
         )
 
     def main(self):
