@@ -1,6 +1,7 @@
 import pytest
 import os
 from database import Database
+from unittest.mock import patch
 
 def test_database_creation_and_encryption(tmp_path):
     fake_db_file = os.path.join(tmp_path, "test_chats.db")
@@ -39,11 +40,15 @@ def test_create_chat_and_save_history(tmp_path):
     assert len(loaded_history) == 2
     assert loaded_history[1]["role"] == "assistant"
 
-def test_wrong_password_fails(tmp_path):
+@patch('builtins.input', return_value='n')
+def test_wrong_password_fails(mock_input, tmp_path):
     fake_db_file = os.path.join(tmp_path, "test_chats3.db")
     
+    # Создаем базу с правильным паролем
     db1 = Database(password="correct_pass", db_path=fake_db_file)
     db1.create_chat("Secret Chat")
     
+    # Пытаемся открыть с неправильным паролем
+    # @patch автоматически ответит 'n' на вопрос об удалении базы
     with pytest.raises(SystemExit):
         Database(password="wrong_pass", db_path=fake_db_file)
