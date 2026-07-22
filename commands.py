@@ -1,6 +1,7 @@
 import time
 import os
 from art import text2art as t2
+from logger import logger
 
 class Commands:
     def __init__(self, providers, agent_map, config_path, version, db):
@@ -61,11 +62,13 @@ Version: {self.version}\n""")
             return
         chat_id = self.db.create_chat(name)
         print(f"[SYSTEM] Created new chat '{name}' with ID: {chat_id}")
+        logger.info(f"Created new chat '{name}' with ID: {chat_id}")
 
     def list_chats(self):
         chats = self.db.list_chats()
         if not chats:
             print("[SYSTEM] No chats found. Use /new <name> to create one.")
+            logger.info("No chats found")
             return
         print("\n--- YOUR CHATS ---")
         for c in chats:
@@ -75,28 +78,34 @@ Version: {self.version}\n""")
     def switch_chat(self, chat_id):
         if self.db.switch_chat(chat_id):
             print(f"[SYSTEM] Switched to chat {chat_id}")
+            logger.info(f"Switched to chat {chat_id}")
         else:
             print(f"[ERROR] Chat {chat_id} not found.")
+            logger.error(f"Chat {chat_id} not found.")
 
     def clear_chat(self):
         chat_id = self.db.data.get('active_chat')
         if not chat_id or chat_id not in self.db.data['chats']:
             print("[ERROR] No active chat to clear.")
+            logger.info("No active chat to clear.")
             return
         
         self.db.data['chats'][chat_id]['history'] = []
         self.db._save()
         print(f"[SYSTEM] History for chat {chat_id} cleared. AI has forgotten the context.")
+        logger.info(f"History for chat {chat_id} clearned.")
 
     def export_chat(self):
         chat_id = self.db.data.get('active_chat')
         if not chat_id or chat_id not in self.db.data['chats']:
             print("[ERROR] No active chat to export.")
+            logger.error("No active chat to export")
             return
         
         chat_data = self.db.data['chats'][chat_id]
         if not chat_data['history']:
             print("[ERROR] Current chat is empty. Nothing to export.")
+            logger.error("Current chat is empty. Nothing to export.")
             return
 
         # Создаем имя файла в текущей папке
@@ -113,15 +122,18 @@ Version: {self.version}\n""")
                     f.write(f"## 👤 {role}\n{msg['content']}\n\n")
         
         print(f"[SYSTEM] Chat exported successfully to '{filename}'")
+        logger.info(f"Chat exported successfully to '{filename}' ")
 
     def message(self, full_input):
         if not self.db.data.get('active_chat'):
             print("[ERROR] No active chat. Please create one using /new <name>")
+            logger.error("No active chat.")
             return
 
         parts = full_input.split(" ", 1)
         if len(parts) < 2:
             print("[ERROR] Format: /message: <agent> <text>")
+            logger.error("Wrong format for /message.")
             return
         
         agent_name = parts[0].lower()
@@ -129,6 +141,7 @@ Version: {self.version}\n""")
 
         if agent_name not in self.agent_map:
             print(f"[ERROR] Agent '{agent_name}' does not exist. Available: {', '.join(self.agent_map.keys())}")
+            logger.error(f"Agent '{agent_name}' does not exist.")
             return
 
         agent_settings = self.agent_map[agent_name]
@@ -140,6 +153,7 @@ Version: {self.version}\n""")
 
         if not agent_provider:
             print(f"[ERROR] Provider '{provider_name}' for agent '{agent_name}' is not configured properly in config.json.")
+            logger.error(f"Provider '{provider_name}' for agent '{agent_name}' is not configured properly in config.json")
             return
 
         system_prompt = self.prompts.get(agent_name, self.prompts["other"])
@@ -177,3 +191,4 @@ Version: {self.version}\n""")
             
         except Exception as e:
             print(f"\n[ERROR] Failed to get response from AI: {e}\n")
+            logger.error(F"Failed to get response from AI: {e}\n")

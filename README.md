@@ -3,7 +3,7 @@
 # **Cortex**
 Secure Multi-Agent AI Framework
 
-[![Cortex: 0.1.2](https://img.shields.io/badge/Version-v0.1.2-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
+[![Cortex: 0.1.3](https://img.shields.io/badge/Version-v0.1.3-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-green?style=flat-square&logo=python)](https://www.python.org/downloads/)
 [![Encryption: Fernet AES](https://img.shields.io/badge/Encryption-Fernet_AES-red?style=flat-square&logo=datadog)](https://cryptography.io/en/latest/fernet/)
@@ -130,6 +130,26 @@ Cortex > /message: ideas how can I optimize this further?
 - Fernet provides authenticated encryption using AES-128 in CBC mode with PKCS7 padding and HMAC using SHA256 for integrity. This ensures that your chats cannot be read or tampered with without your master password. The database is saved locally in `~/.cortex/chats.db`.
 
 - Note: If you lose your master password, you lose access to your chat history, as the encryption is cryptographically secure.
+
+## **Logging**
+
+- When the program is started, Cortex will log information and errors in file `~/.cortex/cortex.log`
+
+- If you want to watch logs Cortex, write in terminal:
+
+- If you have `Windows` (it's cmd):
+
+```cmd
+cd %USERPROFILE%\.cortex
+type cortex.log
+```
+
+- If you have `Linux`, `MacOS` and etc:
+
+```bash
+cd ~/.cortex
+cat cortex.log
+```
 
 ## **Contributing**
 

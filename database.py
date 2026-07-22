@@ -3,6 +3,7 @@ import os
 import hashlib
 import base64
 from cryptography.fernet import Fernet
+from logger import logger
 
 DEFAULT_DB_PATH = os.path.expanduser("~/.cortex/chats.db")
 
@@ -34,12 +35,15 @@ class Database:
             return json.loads(json_string)
         except Exception as e:
             print(f"\n[CRITICAL ERROR] Failed to decrypt database.")
+            logger.error('Failed to decrypt database.')
             print(f"Reason: {str(e) or 'Database file is corrupted or wrong password.'}")
+            logger.error(f"Database file is corrupted or wrong password.")
             
             choice = input("Do you want to DELETE the corrupted database and start fresh? (y/n): ").strip().lower()
             if choice == 'y':
                 os.remove(self.db_path)
                 print("[SYSTEM] Corrupted database deleted. Starting with a clean slate.")
+                logger.info("Corrupted database deleted.")
                 return {"active_chat": None, "chats": {}}
             else:
                 print("[SYSTEM] Exiting. Please check your password or database file manually.")
@@ -56,6 +60,7 @@ class Database:
                 f.write(encrypted_data)
         except Exception as e:
             print(f"[ERROR] Failed to save database: {e}")
+            logger.error(f"Failed to save database {e}")
 
     def create_chat(self, chat_name: str):
         chat_id = f"chat_{len(self.data['chats']) + 1}"

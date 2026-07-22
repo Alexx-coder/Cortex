@@ -14,6 +14,7 @@ from router.openai_provider import OpenAIProvider
 from router.openrouter_provider import OpenRouterProvider
 
 from database import Database
+from logger import logger
 
 PICTURE_MAIN = t2("CORTEX")
 
@@ -50,6 +51,7 @@ def load_config():
         with open(CONFIG_PATH, "w") as f:
             json.dump(DEFAULT_CONFIG, f, indent=4)
         print(f"[SYSTEM] Config file created at: {CONFIG_PATH}")
+        logger.info(f"Config file created at {CONFIG_PATH}")
         print("[SYSTEM] Please open it, add your API keys, assign agents, and restart Cortex.")
         sys.exit(0)
     
@@ -59,12 +61,13 @@ def load_config():
 class Runner:
     def __init__(self):
         self.name = "CORTEX"
-        self.version = 'v0.1.2'
+        self.version = 'v0.1.3'
         
         print("--- DATABASE AUTHENTICATION ---")
         pwd = getpass.getpass("Enter master password: ")
         self.db = Database(pwd)
         print("Database loaded successfully.\n")
+        logger.info("Database loaded successfully\n")
         
         self.config = load_config()
 
@@ -148,14 +151,22 @@ class Runner:
                     self.commands_handler.clear_chat()
                 elif user_input == "/export":
                     self.commands_handler.export_chat()
+                elif user_input == "/clear":
+                    self.commands_handler.clear_chat()
+                elif user_input == "/export":
+                    self.commands_handler.export_chat()
                 else:
                     print(f"[ERROR] Command '{user_input}' not found. Type /help")
+                    logger.error(f"Command '{user_input}' not found.")
+               
                     
             except KeyboardInterrupt:
                 print("\n[SYSTEM] Cortex stopped by user.")
+                logger.info('\nCortex stopped by user.')
                 sys.exit(0)
             except Exception as err:
-                print(f"[ERROR] An error occurred: {err}")
+                print(f"[ERROR] An error has occurred: {err}")
+                logger.error(f'An error has occurred: {err}')
 
 if __name__ == "__main__":
     try:
@@ -163,5 +174,7 @@ if __name__ == "__main__":
       app.main()
     except Exception as err:
         print(f'[ERROR] An error has occurred: {err}')
+        logger.error(f"An error has ocurred: {err}")
     except KeyboardInterrupt:
         print("[SYSTEM] Cortex stopped by user.")
+        logger.info(f'Cortex stopped by user.')
