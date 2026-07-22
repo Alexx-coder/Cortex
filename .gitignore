@@ -40,3 +40,7 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+chat_test.md
+__pycache__
+.pytest_cache

@@ -3,7 +3,7 @@
 # **Cortex**
 Secure Multi-Agent AI Framework
 
-[![Cortex: 0.1.1](https://img.shields.io/badge/Version-v0.1.1-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
+[![Cortex: 0.1.2](https://img.shields.io/badge/Version-v0.1.2-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-green?style=flat-square&logo=python)](https://www.python.org/downloads/)
 [![Encryption: Fernet AES](https://img.shields.io/badge/Encryption-Fernet_AES-red?style=flat-square&logo=datadog)](https://cryptography.io/en/latest/fernet/)

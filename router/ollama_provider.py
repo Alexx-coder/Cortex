@@ -54,21 +54,31 @@ class Ollama:
         except Exception as e:
             return f"[ERROR] Ollama request failed: {e}"
 
-    # chat_stream оставляю без истории пока, чтобы не усложнять
-    def chat_stream(self, prompt: str, system: Optional[str] = None) -> Generator[str, None, None]:
+    def chat_stream(self, prompt: str, system: Optional[str] = None, history: list = None, temperature: float = 0.7, max_tokens: int = 4096) -> Generator[str, None, None]:
         if not self.model:
             yield "[ERROR] No Ollama model selected."
             return
 
-        messages = []
+        messages = history.copy() if history else []
+        
         if system:
-            messages.append({"role": "system", "content": system})
+            if not messages or messages[0].get("role") != "system":
+                messages.insert(0, {"role": "system", "content": system})
+
         messages.append({"role": "user", "content": prompt})
 
         try:
             r = requests.post(
                 f"{self.url}/api/chat",
-                json={"model": self.model, "messages": messages, "stream": True},
+                json={
+                    "model": self.model, 
+                    "messages": messages, 
+                    "stream": True,
+                    "options": {
+                        "temperature": temperature,
+                        "num_predict": max_tokens
+                    }
+                },
                 stream=True,
                 timeout=300,
             )

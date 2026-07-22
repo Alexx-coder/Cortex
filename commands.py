@@ -1,4 +1,5 @@
 import time
+import os
 from art import text2art as t2
 
 class Commands:
@@ -7,7 +8,7 @@ class Commands:
         self.agent_map = agent_map
         self.config_path = config_path
         self.version = version
-        self.db = db  # Теперь база точно здесь
+        self.db = db
 
         self.prompts = {
             "code": "You are an expert programmer. Write clean, optimized code with comments. Answer only to the point.",
@@ -21,7 +22,9 @@ class Commands:
         print("/new <name>      - Create a new chat")
         print("/chats           - List all saved chats")
         print("/switch <id>     - Switch to another chat")
-        print("/message: <agent> <text> - Send message to agent")
+        print("/clear           - Clear current chat history (AI forgets context)")
+        print("/export          - Export current chat to a Markdown (.md) file")
+        print("/message: <agent> <text> - Send message to agent (streaming enabled)")
         print("               Agents: code, ideas, other")
         print("/settings        - Show current configuration")
         print("/about           - Information about Cortex")
@@ -75,6 +78,42 @@ Version: {self.version}\n""")
         else:
             print(f"[ERROR] Chat {chat_id} not found.")
 
+    def clear_chat(self):
+        chat_id = self.db.data.get('active_chat')
+        if not chat_id or chat_id not in self.db.data['chats']:
+            print("[ERROR] No active chat to clear.")
+            return
+        
+        self.db.data['chats'][chat_id]['history'] = []
+        self.db._save()
+        print(f"[SYSTEM] History for chat {chat_id} cleared. AI has forgotten the context.")
+
+    def export_chat(self):
+        chat_id = self.db.data.get('active_chat')
+        if not chat_id or chat_id not in self.db.data['chats']:
+            print("[ERROR] No active chat to export.")
+            return
+        
+        chat_data = self.db.data['chats'][chat_id]
+        if not chat_data['history']:
+            print("[ERROR] Current chat is empty. Nothing to export.")
+            return
+
+        # Создаем имя файла в текущей папке
+        safe_name = chat_data['name'].replace(' ', '_').lower()
+        filename = f"chat_{safe_name}.md"
+        
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(f"# {chat_data['name']}\n\n")
+            for msg in chat_data['history']:
+                role = msg['role'].capitalize()
+                if role == "Assistant":
+                    f.write(f"## 🤖 {role}\n```\n{msg['content']}\n```\n\n")
+                else:
+                    f.write(f"## 👤 {role}\n{msg['content']}\n\n")
+        
+        print(f"[SYSTEM] Chat exported successfully to '{filename}'")
+
     def message(self, full_input):
         if not self.db.data.get('active_chat'):
             print("[ERROR] No active chat. Please create one using /new <name>")
@@ -106,21 +145,35 @@ Version: {self.version}\n""")
         system_prompt = self.prompts.get(agent_name, self.prompts["other"])
         history = self.db.get_active_history()
         
-        print(f"\n[{agent_name.upper()}] Thinking...")
-        
         self.db.add_message("user", prompt_text)
+        print(f"\n[{agent_name.upper()}] Thinking...\n")
 
+        full_response = ""
+        
         try:
-            response = agent_provider.chat(
-                prompt_text, 
-                system=system_prompt, 
-                history=history,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            print(f"\n[{agent_name.upper()}]:\n{response}\n")
+            # МАГИЯ СТРИМИНГА: Проверяем, есть ли у провайдера функция chat_stream
+            if hasattr(agent_provider, 'chat_stream'):
+                for chunk in agent_provider.chat_stream(
+                    prompt_text, 
+                    system=system_prompt, 
+                    history=history,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                ):
+                    print(chunk, end="", flush=True) 
+                    full_response += chunk
+                print("\n") 
+            else:
+                full_response = agent_provider.chat(
+                    prompt_text, 
+                    system=system_prompt, 
+                    history=history,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"[{agent_name.upper()}]:\n{full_response}\n")
             
-            self.db.add_message("assistant", response)
+            self.db.add_message("assistant", full_response)
             
         except Exception as e:
-            print(f"[ERROR] Failed to get response from AI: {e}\n")
+            print(f"\n[ERROR] Failed to get response from AI: {e}\n")

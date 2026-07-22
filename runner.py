@@ -59,7 +59,7 @@ def load_config():
 class Runner:
     def __init__(self):
         self.name = "CORTEX"
-        self.version = 'v0.1.1'
+        self.version = 'v0.1.2'
         
         print("--- DATABASE AUTHENTICATION ---")
         pwd = getpass.getpass("Enter master password: ")
@@ -68,7 +68,6 @@ class Runner:
         
         self.config = load_config()
 
-        self.config = load_config()
         
    
         for agent_name, agent_value in self.config["agents"].items():
@@ -142,6 +141,13 @@ class Runner:
                     self.commands_handler.version()
                 elif user_input == "/settings":
                     self.commands_handler.settings()
+                elif user_input.startswith("/switch "):
+                    chat_id = user_input.replace("/switch ", "").strip()
+                    self.commands_handler.switch_chat(chat_id)
+                elif user_input == "/clear":
+                    self.commands_handler.clear_chat()
+                elif user_input == "/export":
+                    self.commands_handler.export_chat()
                 else:
                     print(f"[ERROR] Command '{user_input}' not found. Type /help")
                     
