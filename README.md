@@ -108,6 +108,7 @@ python runner.py
 | `/chats` | List all saved chats |
 | `/switch <id>` | Switch to another chat session |
 | `/message: <agent> <text>` | Send a prompt to a specific agent (`code`, `ideas`, `other`) |
+| `/export` | Save a chat to .md file |
 | `/settings` | View current provider and agent configuration |
 | `/help` | Show all commands |
 | `/about` | Information about the project |
