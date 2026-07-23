@@ -8,14 +8,16 @@ from logger import logger
 DEFAULT_DB_PATH = os.path.expanduser("~/.cortex/chats.db")
 
 class Database:
-    def __init__(self, password: str, db_path: str = None):
-        # Если путь не указан (как при обычном запуске), используем стандартный
+    def __init__(self, key: bytes = None, password: str = None, db_path: str = None):
         self.db_path = db_path or DEFAULT_DB_PATH
-        
-        # Делаем 32-байтный ключ из пароля
-        key_bytes = hashlib.sha256(password.encode('utf-8')).digest()
-        # Fernet требует ключ в формате Base64. Переводим.
-        self.key = base64.urlsafe_b64encode(key_bytes)
+    
+        if key:
+            self.key = base64.urlsafe_b64encode(key)
+        else:
+            import hashlib
+            key_bytes = hashlib.sha256(password.encode('utf-8')).digest()
+            self.key = base64.urlsafe_b64encode(key_bytes)
+            
         self.cipher = Fernet(self.key)
         self.data = self._load()
 

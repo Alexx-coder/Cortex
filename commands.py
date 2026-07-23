@@ -156,7 +156,7 @@ Version: {self.version}\n""")
             logger.error(f"Provider '{provider_name}' for agent '{agent_name}' is not configured properly in config.json")
             return
 
-        system_prompt = self.prompts.get(agent_name, self.prompts["other"])
+        system_prompt = agent_settings.get("system_prompt") or self.prompts.get(agent_name, self.prompts["other"])
         history = self.db.get_active_history()
         
         self.db.add_message("user", prompt_text)

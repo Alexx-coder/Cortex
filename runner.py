@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import getpass
+import hashlib
 from art import text2art as t2
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'router'))
@@ -22,26 +23,53 @@ CONFIG_DIR = os.path.expanduser("~/.cortex")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 
 DEFAULT_CONFIG = {
-    "gemini": {
-        "api_key": "",
-        "model": "gemini-2.5-flash"
-    },
-    "openai": {
-        "api_key": "",
-        "model": "gpt-3.5-turbo"
-    },
-    "openrouter": {
-        "api_key": "",
-        "model": "meta-llama/llama-3-8b-instruct:free"
-    },
-    "ollama": {
-        "model": "glm-4.7-flash:latest",
-        "base_url": "http://localhost:11434"
+    "providers": {
+        "ollama": {
+            "model": "glm-4.7-flash:latest",
+            "base_url": "http://localhost:11434"
+        },
+        "gemini": {
+            "api_key": "",
+            "model": "gemini-3.1"
+        },
+        "openai": {
+            "api_key": "",
+            "model": "gpt-5.5"
+        },
+        "openrouter": {
+            "api_key": "",
+            "model": "meta-llama/llama-3-8b-instruct:free"
+        }
     },
     "agents": {
-        "code": "ollama",
-        "ideas": "ollama",
-        "other": "ollama"
+        "code": {
+            "provider": "ollama",
+            "temperature": 0.2,
+            "max_tokens": 4096,
+            "system_prompt": "You are an expert programmer. Write clean, optimized code with comments. Answer only to the point."
+        },
+        "ideas": {
+            "provider": "ollama",
+            "temperature": 0.9,
+            "max_tokens": 2048,
+            "system_prompt": "You are a creative idea generator. Help with brainstorming and offer non-standard solutions."
+        },
+        "other": {
+            "provider": "ollama",
+            "temperature": 0.7,
+            "max_tokens": 4096,
+            "system_prompt": "You are a helpful AI assistant. Answer any user questions friendly and in detail."
+        }
+    },
+    "ui": {
+        "show_ascii_art": True,
+        "show_welcome_message": True
+    },
+    "security": {
+        "max_output_limit": 8192 
+    },
+    "memory": {
+        "remember_last_chat": True
     }
 }
 
@@ -61,46 +89,61 @@ def load_config():
 class Runner:
     def __init__(self):
         self.name = "CORTEX"
-        self.version = 'v0.1.3'
-        
-        print("--- DATABASE AUTHENTICATION ---")
-        pwd = getpass.getpass("Enter master password: ")
-        self.db = Database(pwd)
-        print("Database loaded successfully.\n")
-        logger.info("Database loaded successfully\n")
+        self.version = 'v0.2.0'
+
+        TOKEN_PATH = os.path.join(CONFIG_DIR, "auth.token")
+        db_key = None
+
+        if os.path.exists(TOKEN_PATH):
+            with open(TOKEN_PATH, "r") as f:
+                db_key = bytes.fromhex(f.read().strip())
+
+        else:
+            print("--- FIRST TIME SETUP ---")
+            pwd = getpass.getpass("Create a master password for your database: ")
+            db_key = hashlib.sha256(pwd.encode('utf-8')).digest()
+            
+            # Сохраняем токен для будущих запусков
+            with open(TOKEN_PATH, "w") as f:
+                f.write(db_key.hex())
+            print("[SYSTEM] Authentication token saved. You won't need to enter the password again.\n")
+
+        self.db = Database(key=db_key) 
         
         self.config = load_config()
-
         
-   
-        for agent_name, agent_value in self.config["agents"].items():
-            if isinstance(agent_value, str):
-                self.config["agents"][agent_name] = {
-                    "provider": agent_value,
-                    "temperature": 0.7,
-                    "max_tokens": 4096
-                }
-
+        if "providers" not in self.config:
+            old_providers = {
+                "ollama": self.config.pop("ollama", {}),
+                "gemini": self.config.pop("gemini", {}),
+                "openai": self.config.pop("openai", {}),
+                "openrouter": self.config.pop("openrouter", {})
+            }
+            self.config["providers"] = old_providers
+            with open(CONFIG_PATH, "w") as f:
+                json.dump(self.config, f, indent=4)
+                
+        prov_config = self.config.get("providers", {})
         
         self.providers = {
             "ollama": Ollama(
-                model=self.config["ollama"]["model"], 
-                url=self.config["ollama"]["base_url"]
+                model=prov_config.get("ollama", {}).get("model", "glm-4.7-flash:latest"), 
+                url=prov_config.get("ollama", {}).get("base_url", "http://localhost:11434")
             ),
             "gemini": GeminiProvider(
-                api_key=self.config["gemini"]["api_key"], 
-                model=self.config["gemini"]["model"]
-            ) if self.config["gemini"]["api_key"] else None,
+                api_key=prov_config.get("gemini", {}).get("api_key", ""), 
+                model=prov_config.get("gemini", {}).get("model", "gemini-3.1")
+            ) if prov_config.get("gemini", {}).get("api_key") else None,
             
             "openai": OpenAIProvider(
-                api_key=self.config["openai"]["api_key"], 
-                model=self.config["openai"]["model"]
-            ) if self.config["openai"]["api_key"] else None,
+                api_key=prov_config.get("openai", {}).get("api_key", ""), 
+                model=prov_config.get("openai", {}).get("model", "gpt-5.5")
+            ) if prov_config.get("openai", {}).get("api_key") else None,
             
             "openrouter": OpenRouterProvider(
-                api_key=self.config["openrouter"]["api_key"], 
-                model=self.config["openrouter"]["model"]
-            ) if self.config["openrouter"]["api_key"] else None
+                api_key=prov_config.get("openrouter", {}).get("api_key", ""), 
+                model=prov_config.get("openrouter", {}).get("model", "meta-llama/llama-3-8b-instruct:free")
+            ) if prov_config.get("openrouter", {}).get("api_key") else None
         }
 
         self.commands_handler = Commands(
@@ -108,11 +151,15 @@ class Runner:
             agent_map=self.config["agents"],
             config_path=CONFIG_PATH,
             version=self.version,
-            db=self.db  
+            db=self.db
         )
 
     def main(self):
-        print(PICTURE_MAIN)
+        ui_settings = self.config.get("ui", {})
+        
+        if ui_settings.get("show_ascii_art", True):
+            print(PICTURE_MAIN)
+            
         print(f"Version: {self.version} | Type /help for commands\n")
         
         while True:

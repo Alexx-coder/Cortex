@@ -3,7 +3,7 @@
 # **Cortex**
 Secure Multi-Agent AI Framework
 
-[![Cortex: 0.1.3](https://img.shields.io/badge/Version-v0.1.3-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
+[![Cortex: 0.2.0](https://img.shields.io/badge/Version-v0.2.0-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-green?style=flat-square&logo=python)](https://www.python.org/downloads/)
 [![Encryption: Fernet AES](https://img.shields.io/badge/Encryption-Fernet_AES-red?style=flat-square&logo=datadog)](https://cryptography.io/en/latest/fernet/)
@@ -96,6 +96,14 @@ python runner.py
     "ideas": "openrouter",
     "other": "ollama"
 }
+```
+
+ - *Note: On the first launch, you will be asked to create a password. It will be saved as a secure local token, so you won't have to enter it every time.*
+
+- **Advanced Agent Settings:** You can fully customize each agent's behavior directly in config.json:
+
+```json
+"agents": {    "code": {      "provider": "ollama",      "temperature": 0.2,      "max_tokens": 8096,      "system_prompt": "You are a senior Rust developer. Only output code."    }}
 ```
 
 ## **Usage and Commands**
