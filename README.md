@@ -3,7 +3,7 @@
 # **Cortex**
 Secure Multi-Agent AI Framework
 
-[![Cortex: 0.2.0](https://img.shields.io/badge/Version-v0.2.0-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
+[![Cortex: 0.2.1](https://img.shields.io/badge/Version-v0.2.1-blue?style=flat-square)](https://github.com/Alexx-coder/Cortex.git)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-green?style=flat-square&logo=python)](https://www.python.org/downloads/)
 [![Encryption: Fernet AES](https://img.shields.io/badge/Encryption-Fernet_AES-red?style=flat-square&logo=datadog)](https://cryptography.io/en/latest/fernet/)
@@ -26,7 +26,7 @@ Secure Multi-Agent AI Framework
 - Cortex is a powerful CLI tool that splits AI tasks into specialized agents. Instead of using one model for everything, you assign specific roles: one agent for writing code, another for brainstorming ideas, and
 a third for general tasks.
 
-- Privacy First: Your chat history is securely encrypted locally using military-grade AES-256 cryptography. No one can read your data without your master password.
+- Privacy First: Your chat history is securely encrypted locally using military-grade AES-128 (Fernet) cryptography. No one can read your data without your master password.
 
 
 ## **Features**
@@ -117,6 +117,7 @@ python runner.py
 | `/switch <id>` | Switch to another chat session |
 | `/message: <agent> <text>` | Send a prompt to a specific agent (`code`, `ideas`, `other`) |
 | `/export` | Save a chat to .md file |
+| `/load` | Load a file to context |
 | `/clear` | Forget the current context |
 | `/settings` | View current provider and agent configuration |
 | `/help` | Show all commands |
