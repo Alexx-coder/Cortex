@@ -1,5 +1,6 @@
 import time
 import os
+from yaspin import yaspin
 from art import text2art as t2
 from logger import logger
 
@@ -19,18 +20,19 @@ class Commands:
 
     def help(self):
         print("\n--- AVAILABLE COMMANDS ---")
-        print("/help            - Show this help message")
-        print("/new <name>      - Create a new chat")
-        print("/chats           - List all saved chats")
-        print("/switch <id>     - Switch to another chat")
-        print("/clear           - Clear current chat history (AI forgets context)")
-        print("/export          - Export current chat to a Markdown (.md) file")
+        print("/help             - Show this help message")
+        print("/new <name>       - Create a new chat")
+        print("/chats            - List all saved chats")
+        print("/switch <id>      - Switch to another chat")
+        print("/clear            - Clear current chat history (AI forgets context)")
+        print("/export           - Export current chat to a Markdown (.md) file")
+        print("/load <file_path> - Load a file into AI context")
         print("/message: <agent> <text> - Send message to agent (streaming enabled)")
         print("               Agents: code, ideas, other")
-        print("/settings        - Show current configuration")
-        print("/about           - Information about Cortex")
-        print("/version         - Current version")
-        print("/stop            - Stop Cortex")
+        print("/settings         - Show current configuration")
+        print("/about            - Information about Cortex")
+        print("/version          - Current version")
+        print("/stop             - Stop Cortex")
         print("-------------------------\n")
 
     def about(self):
@@ -94,6 +96,26 @@ Version: {self.version}\n""")
         self.db._save()
         print(f"[SYSTEM] History for chat {chat_id} cleared. AI has forgotten the context.")
         logger.info(f"History for chat {chat_id} clearned.")
+
+    def load_file(self, file_path):
+        if not self.db.data.get('active_chat'):
+            print("[ERROR] No active chat. Use /new <name> first.")
+            return
+
+        if not os.path.exists(file_path):
+            print(f"[ERROR] File '{file_path}' not found.")
+            return
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # Добавляем файл в историю как сообщение пользователя
+            prompt_text = f"[System: User loaded file '{file_path}']\n```\n{content}\n```"
+            self.db.add_message("user", prompt_text)
+            print(f"[SYSTEM] File '{file_path}' loaded into context ({len(content)} chars). You can now ask questions about it.")
+        except Exception as e:
+            print(f"[ERROR] Failed to read file: {e}")
 
     def export_chat(self):
         chat_id = self.db.data.get('active_chat')
@@ -163,10 +185,9 @@ Version: {self.version}\n""")
         print(f"\n[{agent_name.upper()}] Thinking...\n")
 
         full_response = ""
-        
+
         try:
-            # МАГИЯ СТРИМИНГА: Проверяем, есть ли у провайдера функция chat_stream
-            if hasattr(agent_provider, 'chat_stream'):
+            if hasattr(agent_provider, 'chat_stream') and provider_name == "ollama":
                 for chunk in agent_provider.chat_stream(
                     prompt_text, 
                     system=system_prompt, 
@@ -174,21 +195,23 @@ Version: {self.version}\n""")
                     temperature=temperature,
                     max_tokens=max_tokens
                 ):
-                    print(chunk, end="", flush=True) 
+                    print(chunk, end="", flush=True)
                     full_response += chunk
-                print("\n") 
+                print("\n")
             else:
-                full_response = agent_provider.chat(
-                    prompt_text, 
-                    system=system_prompt, 
-                    history=history,
-                    temperature=temperature,
-                    max_tokens=max_tokens
-                )
+                with yaspin(text=f"[{agent_name.upper()}] Generating response...", color="cyan") as sp:
+                    full_response = agent_provider.chat(
+                        prompt_text, 
+                        system=system_prompt, 
+                        history=history,
+                        temperature=temperature,
+                        max_tokens=max_tokens
+                    )
+                    sp.ok(f"Generated {len(full_response)} characters.") 
+                
                 print(f"[{agent_name.upper()}]:\n{full_response}\n")
             
             self.db.add_message("assistant", full_response)
             
         except Exception as e:
             print(f"\n[ERROR] Failed to get response from AI: {e}\n")
-            logger.error(F"Failed to get response from AI: {e}\n")

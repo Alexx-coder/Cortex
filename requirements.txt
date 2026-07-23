@@ -2,3 +2,4 @@ cryptography
 pytest
 requests
 art
+yaspin

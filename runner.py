@@ -4,6 +4,7 @@ import sys
 import time
 import getpass
 import hashlib
+import readline
 from art import text2art as t2
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'router'))
@@ -120,8 +121,17 @@ class Runner:
                 "openrouter": self.config.pop("openrouter", {})
             }
             self.config["providers"] = old_providers
-            with open(CONFIG_PATH, "w") as f:
-                json.dump(self.config, f, indent=4)
+
+        for agent_name, agent_value in self.config.get("agents", {}).items():
+            if isinstance(agent_value, str):
+                self.config["agents"][agent_name] = {
+                    "provider": agent_value,
+                    "temperature": 0.7,
+                    "max_tokens": 4096
+                }
+        
+        with open(CONFIG_PATH, "w") as f:
+            json.dump(self.config, f, indent=4)
                 
         prov_config = self.config.get("providers", {})
         
@@ -179,6 +189,15 @@ class Runner:
                 elif user_input.startswith("/switch "):
                     chat_id = user_input.replace("/switch ", "").strip()
                     self.commands_handler.switch_chat(chat_id)
+                elif user_input == "/clear":
+                    self.commands_handler.clear_chat()
+                elif user_input == "/export":
+                    self.commands_handler.export_chat()
+                    
+                elif user_input.startswith("/load "):
+                    file_path = user_input.replace("/load ", "").strip()
+                    self.commands_handler.load_file(file_path)
+                    
                 elif user_input == "/stop":
                     print("Stopping Cortex...")
                     time.sleep(1)
@@ -191,29 +210,14 @@ class Runner:
                     self.commands_handler.version()
                 elif user_input == "/settings":
                     self.commands_handler.settings()
-                elif user_input.startswith("/switch "):
-                    chat_id = user_input.replace("/switch ", "").strip()
-                    self.commands_handler.switch_chat(chat_id)
-                elif user_input == "/clear":
-                    self.commands_handler.clear_chat()
-                elif user_input == "/export":
-                    self.commands_handler.export_chat()
-                elif user_input == "/clear":
-                    self.commands_handler.clear_chat()
-                elif user_input == "/export":
-                    self.commands_handler.export_chat()
                 else:
                     print(f"[ERROR] Command '{user_input}' not found. Type /help")
-                    logger.error(f"Command '{user_input}' not found.")
-               
                     
             except KeyboardInterrupt:
                 print("\n[SYSTEM] Cortex stopped by user.")
-                logger.info('\nCortex stopped by user.')
                 sys.exit(0)
             except Exception as err:
-                print(f"[ERROR] An error has occurred: {err}")
-                logger.error(f'An error has occurred: {err}')
+                print(f"[ERROR] An error occurred: {err}")
 
 if __name__ == "__main__":
     try:
